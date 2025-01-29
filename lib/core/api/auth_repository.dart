@@ -24,25 +24,54 @@ class AuthRepository {
     required this.storage,
   }) : tokenManager = TokenManager(storage: storage);
 
+
+  String? _extractCookieValue(String cookie, String key) {
+    final startIndex = cookie.indexOf('$key=');
+    if (startIndex == -1) return null;
+
+    final endIndex = cookie.indexOf(';', startIndex);
+    return (endIndex == -1)
+        ? cookie.substring(startIndex + key.length + 1)
+        : cookie.substring(startIndex + key.length + 1, endIndex);
+  }
+
   Future<bool> login(String email, String password) async {
     try {
       final response = await dio.post(
         '/auth/login/email',
         data: {'email': email, 'password': password},
       );
-      //Debug: Stampiamo i cookie ricevuti
+
+      // 🔍 Debug: Stampiamo i cookie ricevuti
       print('Cookies ricevuti: ${response.headers.map['set-cookie']}');
 
-      if (response.data['success'] == true) {
+      // Estrarre token dai cookie
+      final cookies = response.headers.map['set-cookie'] ?? [];
+      String? accessToken;
+      String? refreshToken;
+
+      for (var cookie in cookies) {
+        if (cookie.contains('access-token=')) {
+          accessToken = _extractCookieValue(cookie, 'access-token');
+        } else if (cookie.contains('refresh-token=')) {
+          refreshToken = _extractCookieValue(cookie, 'refresh-token');
+        }
+      }
+
+      print('Access Token Estratto: $accessToken'); // 🔍 Debug
+      print('Refresh Token Estratto: $refreshToken'); // 🔍 Debug
+
+      if (accessToken != null && refreshToken != null) {
         await tokenManager.saveUserData({
-          'accessToken': response.headers['set-cookie']?[0].split(';')[0].split('=')[1],
-          'refreshToken': response.headers['set-cookie']?[1].split(';')[0].split('=')[1],
+          'accessToken': accessToken,
+          'refreshToken': refreshToken,
           'role': response.data['role'],
           'email': response.data['email'],
           'picture': response.data['picture']
         });
         return true;
       }
+
       return false;
     } on DioException catch (e) {
       throw _handleError(e.response?.data);
@@ -87,6 +116,28 @@ class AuthRepository {
       );
     } on DioException catch (e) {
       throw _handleError(e);
+    }
+  }
+
+  Future<void> logout() async {
+    try {
+      final response = await dio.get('/auth/login/logout'); // Usa GET se il backend lo richiede
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        print('Logout riuscito');
+
+        // Elimina i token memorizzati
+        await storage.delete(key: 'access_token');
+        await storage.delete(key: 'refresh_token');
+        await storage.delete(key: 'user_role');
+        await storage.delete(key: 'user_email');
+        await storage.delete(key: 'profile_picture');
+      } else {
+        throw 'Errore durante il logout';
+      }
+    } on DioException catch (e) {
+      print('Errore di logout: ${e.message}');
+      throw _handleError(e.response?.data);
     }
   }
 

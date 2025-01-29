@@ -1,4 +1,6 @@
 // main.dart
+import 'package:evup_feb2025_flutter/core/routes.dart';
+import 'package:evup_feb2025_flutter/features/home/Presentation/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -30,39 +32,6 @@ enum UserRole {
 class MyApp extends ConsumerWidget {
   MyApp({super.key});
 
-  final _router = GoRouter(
-    initialLocation: '/',
-    routes: [
-      GoRoute(
-        path: '/',
-        builder: (context, state) => const RoleSelectorScreen(),
-      ),
-      GoRoute(
-        path: '/login',
-        builder: (context, state) {
-          final role = state.extra as UserRole;
-          return LoginScreen(role: role);
-        },
-      ),
-      GoRoute(
-        path: '/signup',
-        builder: (context, state) {
-          final role = state.extra as UserRole;
-          return SignupScreen(role: role);
-        },
-      ),
-    ],
-    redirect: (context, state) async {
-      final tokenManager = TokenManager(storage: const FlutterSecureStorage());
-      final isLoggedIn = await tokenManager.hasToken();
-
-      if (isLoggedIn && (state.matchedLocation == '/' || state.matchedLocation == '/login')) {
-        return '/home';
-      }
-      return null;
-    },
-  );
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
@@ -75,7 +44,7 @@ class MyApp extends ConsumerWidget {
           ),
         ),
       ),
-      routerConfig: _router,
+      routerConfig: router, // Usa le route centralizzate
       debugShowCheckedModeBanner: false,
     );
   }
