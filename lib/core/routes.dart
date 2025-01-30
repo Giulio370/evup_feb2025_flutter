@@ -19,16 +19,13 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       builder: (context, state) {
-        final role = state.extra as UserRole;
+        final role = state.extra is UserRole ? state.extra as UserRole : UserRole.user;
         return LoginScreen(role: role);
       },
     ),
     GoRoute(
       path: '/signup',
-      builder: (context, state) {
-        final role = state.extra as UserRole;
-        return SignupScreen(role: role);
-      },
+      builder: (context, state) => const SignupScreen(),
     ),
     GoRoute(
       path: '/home',

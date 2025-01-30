@@ -88,7 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             _passwordController.text,
                           );
 
-
                           if (success) {
                             final role = await authRepo.tokenManager.getRole();
 
@@ -99,13 +98,31 @@ class _LoginScreenState extends State<LoginScreen> {
                             }
                           }
                         } catch (e) {
-                          print('Errore di connessione: $e'); // <-- Stampa l'errore esatto
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(e.toString()),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
+                          print('Errore ricevuto: $e');
+
+                          if (e.toString().contains("EMAIL_NOT_VERIFIED")) { // Modifica qui
+                            if (mounted) {
+                              context.go('/');
+                            }
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Devi verificare la tua email prima di accedere."),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+
+                            // Aggiungi un delay per permettere la visualizzazione dello SnackBar
+
+
+
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(e.toString()),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
                         }
                       }
                     },

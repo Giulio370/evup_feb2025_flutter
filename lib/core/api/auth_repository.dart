@@ -1,7 +1,9 @@
 // core/api/auth_repository.dart
 import 'package:dio/dio.dart';
 import 'package:evup_feb2025_flutter/core/utils/token_manager.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:go_router/go_router.dart';
 import 'package:riverpod/riverpod.dart';
 import '../../main.dart';
 import 'dio_client.dart';
@@ -42,7 +44,6 @@ class AuthRepository {
         data: {'email': email, 'password': password},
       );
 
-      // 🔍 Debug: Stampiamo i cookie ricevuti
       print('Cookies ricevuti: ${response.headers.map['set-cookie']}');
 
       // Estrarre token dai cookie
@@ -58,8 +59,8 @@ class AuthRepository {
         }
       }
 
-      print('Access Token Estratto: $accessToken'); // 🔍 Debug
-      print('Refresh Token Estratto: $refreshToken'); // 🔍 Debug
+      print('Access Token Estratto: $accessToken');
+      print('Refresh Token Estratto: $refreshToken');
 
       if (accessToken != null && refreshToken != null) {
         await tokenManager.saveUserData({
@@ -74,15 +75,47 @@ class AuthRepository {
 
       return false;
     } on DioException catch (e) {
-      throw _handleError(e.response?.data);
+      final errorData = e.response?.data;
+
+      // Gestione specifica dell'errore EMAIL_NOT_VERIFIED
+      if (e.response?.statusCode == 400 && errorData is List) {
+        if (errorData.contains("EMAIL_NOT_VERIFIED")) {
+          throw "EMAIL_NOT_VERIFIED";
+        }
+      }
+
+      // Se non è un errore gestito, lo passiamo all'handler generale
+      throw _handleError(e);
     }
   }
 
-  String _handleError(dynamic errorData) {
-    if (errorData is Map<String, dynamic>) {
-      return errorData['message'] ?? 'Errore sconosciuto';
+
+  String _handleError(DioException e) {
+    if (e.response != null) {
+      final data = e.response!.data;
+      if (data is Map<String, dynamic> && data.containsKey('message')) {
+        return data['message']; // Messaggio dal server
+      }
+
+      // Gestione degli errori in base allo status code
+      switch (e.response!.statusCode) {
+        case 400:
+          return 'Richiesta non valida. Controlla i dati inseriti.';
+        case 401:
+          return 'Non autorizzato. Controlla le credenziali.';
+        case 403:
+          return 'Accesso negato.';
+        case 404:
+          return 'Risorsa non trovata.';
+        case 500:
+          return 'Errore del server. Riprova più tardi.';
+        default:
+          return 'Errore sconosciuto: ${e.response!.statusCode}';
+      }
+    } else {
+      // Errore di connessione (es. timeout, server non raggiungibile)
+      return 'Errore di connessione: verifica la tua rete.';
     }
-    return 'Errore di connessione';
   }
 
   Future<void> _saveTokens(Response response) async {
@@ -99,7 +132,7 @@ class AuthRepository {
     required String firstName,
     required String lastName,
     required String phone,
-    required UserRole role,
+    required BuildContext context,
   }) async {
     try {
       await dio.post(
@@ -112,12 +145,39 @@ class AuthRepository {
           'phoneNumber': phone.replaceAll('+', ''),
           'phonePrefix': '+39',
           'conditionAccepted': 'true',
+          'role': 'user',
         },
       );
     } on DioException catch (e) {
-      throw _handleError(e);
+      final errorMessage = _handleError(e);
+
+      // Se la risposta contiene "USER_ALREADY_EXISTS"
+      if (e.response?.statusCode == 400 && e.response?.data is List) {
+        final errors = e.response!.data as List;
+        if (errors.contains("USER_ALREADY_EXISTS")) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Email già registrata. Reindirizzamento al login..."),
+              duration: Duration(seconds: 2),
+            ),
+          );
+
+          // Attendi 2 secondi per far vedere il messaggio, poi vai al login
+          await Future.delayed(const Duration(seconds: 2));
+          if (context.mounted) {
+            context.push('/login', extra: UserRole.user);
+          }
+          return;
+        }
+      }
+
+      // Se è un altro errore, mostra il messaggio standard
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
     }
   }
+
 
   Future<void> logout() async {
     try {
