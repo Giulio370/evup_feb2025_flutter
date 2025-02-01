@@ -1,4 +1,6 @@
 // core/api/auth_repository.dart
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:evup_feb2025_flutter/core/utils/token_manager.dart';
 import 'package:flutter/material.dart';
@@ -7,6 +9,57 @@ import 'package:go_router/go_router.dart';
 import 'package:riverpod/riverpod.dart';
 import '../../main.dart';
 import 'dio_client.dart';
+
+final eventRepositoryProvider = Provider<EventRepository>((ref) {
+  final authRepo = ref.read(authRepositoryProvider);
+  return EventRepository(authRepo);
+});
+
+class EventRepository {
+  final AuthRepository authRepository;
+
+  EventRepository(this.authRepository);
+
+  Future<List<Map<String, dynamic>>> getEventsForUser() async {
+    return await authRepository.getEvents();
+  }
+
+
+  Future<bool> deleteEvent(String eventSlug) async {
+    try {
+      // Recupera i token (ad esempio, dal TokenManager o dal local storage)
+      String? accessToken = await authRepository.tokenManager.accessToken;
+      String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili';
+      }
+
+      // Crea la stringa dei cookie
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      // Esegui la richiesta DELETE con il cookie nell'header
+      final response = await authRepository.dio.delete(
+        '/events/remove/${Uri.encodeComponent(eventSlug)}',
+        options: Options(
+          headers: {
+            'Cookie': cookieHeader, // Aggiungi i cookie nell'header
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return true; // Evento eliminato correttamente
+      } else {
+        throw 'Errore nella cancellazione dell\'evento';
+      }
+    } on DioException catch (e) {
+      throw authRepository._handleError(e); // Gestisci l'errore come nelle altre funzioni
+    }
+  }
+
+}
+
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository(
@@ -36,6 +89,24 @@ class AuthRepository {
         ? cookie.substring(startIndex + key.length + 1)
         : cookie.substring(startIndex + key.length + 1, endIndex);
   }
+
+  Future<List<Map<String, dynamic>>> getEvents() async {
+    try {
+      final response = await dio.get('/events/get');
+
+
+      if (response.statusCode == 200) {
+        final List<dynamic> events = response.data;
+        return events.cast<Map<String, dynamic>>();
+      }
+
+      return [];
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+
 
   Future<bool> login(String email, String password) async {
     try {
