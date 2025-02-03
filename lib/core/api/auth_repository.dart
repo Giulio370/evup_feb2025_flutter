@@ -24,6 +24,100 @@ class EventRepository {
     return await authRepository.getEvents();
   }
 
+  Future<bool> updateEvent({
+    required String eventSlug,
+    required String title,
+    required String address,
+    required DateTime timeStart,
+    required DateTime timeEnd,
+    required String description,
+  }) async {
+    try {
+      String? accessToken = await authRepository.tokenManager.accessToken;
+      String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili';
+      }
+
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      final data = {
+        "title": title,
+        "sbtitle": "Default Subtitle",  // Valore di default
+        "address": address,
+        "special_guest": {"name": "Nessun ospite"},  // Valore predefinito
+        "tags": [{"name": "Generale"}],  // Valore predefinito
+        "time_start": timeStart.toUtc().toIso8601String(),
+        "time_end": timeEnd.toUtc().toIso8601String(),
+        "description": description,
+      };
+
+      final response = await authRepository.dio.put(
+        '/events/update/${Uri.encodeComponent(eventSlug)}',
+        data: data,
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+          contentType: Headers.jsonContentType,
+        ),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 204;
+    } on DioException catch (e) {
+      throw authRepository._handleError(e);
+    }
+  }
+
+  Future<bool> createEvent({
+    required String title,
+    required String address,
+    required DateTime timeStart,
+    required DateTime timeEnd,
+    required String description,
+    String? sbtitle, // Parametro opzionale
+    String? specialGuestName, // Parametro opzionale
+    String? tagName, // Parametro opzionale
+  }) async {
+    try {
+      String? accessToken = await authRepository.tokenManager.accessToken;
+      String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili';
+      }
+
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      final data = {
+        "title": title,
+        "sbtitle": sbtitle ?? "Default Subtitle", // Usa valore opzionale o default
+        "address": address,
+        "special_guest": {"name": specialGuestName ?? "Nessun ospite"},
+        "tags": {"name": tagName ?? "Generale"}, // Struttura corretta come oggetto
+        "time_start": timeStart.toUtc().toIso8601String(),
+        "time_end": timeEnd.toUtc().toIso8601String(),
+        "description": description,
+      };
+
+      final response = await authRepository.dio.post(
+        '/events/create',
+        data: data,
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+          contentType: Headers.jsonContentType,
+        ),
+      );
+
+      return response.statusCode == 200 || response.statusCode == 201;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 400) {
+        final errorMessage = e.response?.data?['error'] ?? 'Errore sconosciuto';
+        throw errorMessage; // Restituisce l'errore specifico dal backend
+      }
+      throw authRepository._handleError(e);
+    }
+  }
+
 
   Future<bool> deleteEvent(String eventSlug) async {
     try {

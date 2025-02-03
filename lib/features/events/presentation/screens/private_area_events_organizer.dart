@@ -45,7 +45,7 @@ class OrganizerEventsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () => _showEventForm(context, null),
+            onPressed: () => _showEventForm(context,ref, null),
           ),
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -72,7 +72,7 @@ class OrganizerEventsScreen extends ConsumerWidget {
           itemCount: events.length,
           itemBuilder: (context, index) => _EventCard(
             event: events[index],
-            onEdit: () => _showEventForm(context, events[index]),
+            onEdit: () => _showEventForm(context, ref, events[index]),
             onDelete: () => _confirmDelete(context, eventRepo, events[index]),
           ),
         ),
@@ -80,8 +80,9 @@ class OrganizerEventsScreen extends ConsumerWidget {
     );
   }
 
-  void _showEventForm(BuildContext context, Map<String, dynamic>? event) {
+  void _showEventForm(BuildContext context, WidgetRef ref, Map<String, dynamic>? event) {
     final _formKey = GlobalKey<FormState>();
+    final eventRepo = ref.read(eventRepositoryProvider);
     final TextEditingController titleController = TextEditingController(text: event?['title'] ?? '');
     final TextEditingController sbtitleController = TextEditingController(text: event?['sbtitle'] ?? '');
     final TextEditingController addressController = TextEditingController(text: event?['address'] ?? '');
@@ -108,47 +109,22 @@ class OrganizerEventsScreen extends ConsumerWidget {
                     decoration: InputDecoration(labelText: 'Titolo'),
                     validator: (value) => value == null || value.isEmpty ? 'Campo obbligatorio' : null,
                   ),
-                  SizedBox(height: 7),
                   TextFormField(
                     controller: sbtitleController,
                     decoration: InputDecoration(labelText: 'Sottotitolo'),
                   ),
-                  SizedBox(height: 7),
                   TextFormField(
                     controller: addressController,
                     decoration: InputDecoration(labelText: 'Indirizzo'),
                   ),
-                  SizedBox(height: 7),
                   TextFormField(
                     controller: guestController,
                     decoration: InputDecoration(labelText: 'Ospite Speciale'),
                   ),
-                  SizedBox(height: 7),
                   TextFormField(
                     controller: descriptionController,
                     decoration: InputDecoration(labelText: 'Descrizione'),
                     maxLines: 3,
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: Row(
-                      children: [
-                        Text("Tags: "),
-                        Wrap(
-                          spacing: 6.0,
-                          children: tags.map((tag) => Chip(label: Text(tag))).toList(),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.add),
-                          onPressed: () async {
-                            final newTag = await _showTagDialog(context);
-                            if (newTag != null && newTag.isNotEmpty) {
-                              tags.add(newTag);
-                            }
-                          },
-                        ),
-                      ],
-                    ),
                   ),
                   ListTile(
                     title: Text(timeStart == null ? "Scegli data e ora inizio" : "Inizio: ${DateFormat('dd/MM/yyyy HH:mm').format(timeStart!)}"),
@@ -203,19 +179,28 @@ class OrganizerEventsScreen extends ConsumerWidget {
             child: const Text('Annulla'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (_formKey.currentState!.validate()) {
-                final newEvent = {
-                  'title': titleController.text,
-                  'sbtitle': sbtitleController.text,
-                  'address': addressController.text,
-                  'special_guest': guestController.text,
-                  'description': descriptionController.text,
-                  'tags': tags,
-                  'time_start': timeStart?.toIso8601String(),
-                  'time_end': timeEnd?.toIso8601String(),
-                };
-                Navigator.pop(context, newEvent);
+                if (event == null) {
+                  print("NUOVOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
+                  await eventRepo.createEvent(
+                    title: titleController.text,
+                    address: addressController.text,
+                    timeStart: timeStart!,
+                    timeEnd: timeEnd!,
+                    description: descriptionController.text,
+                  );
+                } else {
+                  await eventRepo.updateEvent(
+                    eventSlug: event['slug'],
+                    title: titleController.text,
+                    address: addressController.text,
+                    timeStart: timeStart!,
+                    timeEnd: timeEnd!,
+                    description: descriptionController.text,
+                  );
+                }
+                Navigator.pop(context);
               }
             },
             child: const Text('Salva'),
