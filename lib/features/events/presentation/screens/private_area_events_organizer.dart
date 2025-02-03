@@ -81,10 +81,172 @@ class OrganizerEventsScreen extends ConsumerWidget {
   }
 
   void _showEventForm(BuildContext context, Map<String, dynamic>? event) {
-    showModalBottomSheet(
+    final _formKey = GlobalKey<FormState>();
+    final TextEditingController titleController = TextEditingController(text: event?['title'] ?? '');
+    final TextEditingController sbtitleController = TextEditingController(text: event?['sbtitle'] ?? '');
+    final TextEditingController addressController = TextEditingController(text: event?['address'] ?? '');
+    final TextEditingController guestController = TextEditingController(text: event?['special_guest'] ?? '');
+    final TextEditingController descriptionController = TextEditingController(text: event?['description'] ?? '');
+    List<String> tags = List<String>.from(event?['tags'] ?? []);
+    DateTime? timeStart = event?['time_start'] != null ? DateTime.parse(event!['time_start']) : null;
+    DateTime? timeEnd = event?['time_end'] != null ? DateTime.parse(event!['time_end']) : null;
+
+    showDialog(
       context: context,
-      isScrollControlled: true,
-      builder: (context) => EventFormModal(event: event),
+      builder: (context) => AlertDialog(
+        title: Text(event == null ? 'Crea Evento' : 'Modifica Evento'),
+        content: SingleChildScrollView(
+          child: Container(
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: titleController,
+                    decoration: InputDecoration(labelText: 'Titolo'),
+                    validator: (value) => value == null || value.isEmpty ? 'Campo obbligatorio' : null,
+                  ),
+                  SizedBox(height: 7),
+                  TextFormField(
+                    controller: sbtitleController,
+                    decoration: InputDecoration(labelText: 'Sottotitolo'),
+                  ),
+                  SizedBox(height: 7),
+                  TextFormField(
+                    controller: addressController,
+                    decoration: InputDecoration(labelText: 'Indirizzo'),
+                  ),
+                  SizedBox(height: 7),
+                  TextFormField(
+                    controller: guestController,
+                    decoration: InputDecoration(labelText: 'Ospite Speciale'),
+                  ),
+                  SizedBox(height: 7),
+                  TextFormField(
+                    controller: descriptionController,
+                    decoration: InputDecoration(labelText: 'Descrizione'),
+                    maxLines: 3,
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 10),
+                    child: Row(
+                      children: [
+                        Text("Tags: "),
+                        Wrap(
+                          spacing: 6.0,
+                          children: tags.map((tag) => Chip(label: Text(tag))).toList(),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.add),
+                          onPressed: () async {
+                            final newTag = await _showTagDialog(context);
+                            if (newTag != null && newTag.isNotEmpty) {
+                              tags.add(newTag);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                  ListTile(
+                    title: Text(timeStart == null ? "Scegli data e ora inizio" : "Inizio: ${DateFormat('dd/MM/yyyy HH:mm').format(timeStart!)}"),
+                    trailing: Icon(Icons.access_time),
+                    onTap: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2000),
+                        lastDate: DateTime(2101),
+                      );
+                      if (pickedDate != null) {
+                        TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (pickedTime != null) {
+                          timeStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+                        }
+                      }
+                    },
+                  ),
+                  ListTile(
+                    title: Text(timeEnd == null ? "Scegli data e ora fine" : "Fine: ${DateFormat('dd/MM/yyyy HH:mm').format(timeEnd!)}"),
+                    trailing: Icon(Icons.access_time),
+                    onTap: () async {
+                      DateTime? pickedDate = await showDatePicker(
+                        context: context,
+                        initialDate: timeStart ?? DateTime.now(),
+                        firstDate: timeStart ?? DateTime.now(),
+                        lastDate: DateTime(2101),
+                      );
+                      if (pickedDate != null) {
+                        TimeOfDay? pickedTime = await showTimePicker(
+                          context: context,
+                          initialTime: TimeOfDay.now(),
+                        );
+                        if (pickedTime != null) {
+                          timeEnd = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annulla'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_formKey.currentState!.validate()) {
+                final newEvent = {
+                  'title': titleController.text,
+                  'sbtitle': sbtitleController.text,
+                  'address': addressController.text,
+                  'special_guest': guestController.text,
+                  'description': descriptionController.text,
+                  'tags': tags,
+                  'time_start': timeStart?.toIso8601String(),
+                  'time_end': timeEnd?.toIso8601String(),
+                };
+                Navigator.pop(context, newEvent);
+              }
+            },
+            child: const Text('Salva'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
+  Future<String?> _showTagDialog(BuildContext context) async {
+    TextEditingController tagController = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Aggiungi Tag"),
+        content: TextField(
+          controller: tagController,
+          decoration: InputDecoration(labelText: "Tag"),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Annulla"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, tagController.text),
+            child: Text("Aggiungi"),
+          ),
+        ],
+      ),
     );
   }
 
@@ -148,7 +310,7 @@ class _EventCard extends StatelessWidget {
       margin: const EdgeInsets.all(8),
       child: ListTile(
         leading: event["imageUrl"] != null
-            ? Image.network(event["imageUrl"], width: 50, height: 50, fit: BoxFit.cover)
+            ? Image.network(event["picture_url"], width: 50, height: 50, fit: BoxFit.cover)
             : const Icon(Icons.event),
         title: Text(event["title"] ?? "Senza titolo"),
         subtitle: Column(
