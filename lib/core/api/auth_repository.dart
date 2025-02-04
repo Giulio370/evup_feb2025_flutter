@@ -68,6 +68,43 @@ class EventRepository {
     }
   }
 
+  Future<Map<String, dynamic>> getEventBySlug(String eventSlug) async {
+    try {
+      // Recupera i token dal TokenManager
+      String? accessToken = await authRepository.tokenManager.accessToken;
+      String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili - Effettua il login';
+      }
+
+      // Costruisci il cookie header
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      // Effettua la richiesta con gli headers
+      final response = await authRepository.dio.get(
+        '/events/getby/slug/${Uri.encodeComponent(eventSlug)}',
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        // Estrae i dati dalla risposta e verifica la struttura
+        if (response.data is Map<String, dynamic> &&
+            response.data['success'] == true &&
+            response.data['data'] is Map<String, dynamic>) {
+          return response.data['data'] as Map<String, dynamic>;
+        }
+        throw 'Formato risposta non valido';
+      }
+
+      throw 'Errore nella richiesta: ${response.statusCode}';
+    } on DioException catch (e) {
+      throw authRepository._handleError(e);
+    }
+  }
+
   Future<bool> createEvent({
     required String title,
     required String address,
@@ -114,6 +151,38 @@ class EventRepository {
         final errorMessage = e.response?.data?['error'] ?? 'Errore sconosciuto';
         throw errorMessage; // Restituisce l'errore specifico dal backend
       }
+      throw authRepository._handleError(e);
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getEventsNormalUser() async {
+    try {
+      // Recupera i token dal TokenManager
+      String? accessToken = await authRepository.tokenManager.accessToken;
+      String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili - Effettua il login';
+      }
+
+      // Costruisci il cookie header
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      // Effettua la richiesta con gli headers
+      final response = await authRepository.dio.get(
+        '/events/get',
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> events = response.data;
+        return events.cast<Map<String, dynamic>>();
+      }
+
+      return [];
+    } on DioException catch (e) {
       throw authRepository._handleError(e);
     }
   }
