@@ -3,6 +3,7 @@ import 'package:evup_feb2025_flutter/core/utils/token_manager.dart';
 import 'package:evup_feb2025_flutter/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:evup_feb2025_flutter/features/events/presentation/screens/event_list.dart';
 import 'package:evup_feb2025_flutter/features/events/presentation/screens/private_area_events_organizer.dart';
+import 'package:evup_feb2025_flutter/features/profile/presentation/screens/user_profile.dart';
 import 'package:evup_feb2025_flutter/main.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
@@ -47,6 +48,10 @@ final router = GoRouter(
             ? null
             : '/home';
       },
+    ),
+    GoRoute(
+      path: '/profile',
+      builder: (context, state) => ProfilePage(),
     ),
     // Altre Route
   ],

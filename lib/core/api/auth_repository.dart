@@ -24,6 +24,44 @@ class EventRepository {
     return await authRepository.getEvents();
   }
 
+  Future<Map<String, dynamic>> fetchUser() async {
+    try {
+      final String? accessToken = await authRepository.tokenManager.accessToken;
+      final String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      print('Access Token letto: $accessToken');
+      print('Refresh Token letto: $refreshToken');
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili - Effettua il login';
+      }
+
+      final String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      final response = await authRepository.dio.get(
+        '/auth/fetch/user',
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+        ),
+      );
+
+      print('Response ricevuta: ${response.statusCode} - ${response.data}');
+
+      if (response.statusCode == 200) {
+        if (response.data is Map<String, dynamic>) {
+          return response.data as Map<String, dynamic>;
+        } else {
+          throw 'Formato risposta non valido';
+        }
+      }
+
+      throw 'Errore nella richiesta: ${response.statusCode}';
+    } on DioException catch (e) {
+      throw authRepository._handleError(e);
+    }
+  }
+
+
   Future<bool> updateEvent({
     required String eventSlug,
     required String title,
@@ -242,6 +280,64 @@ class AuthRepository {
     required this.storage,
   }) : tokenManager = TokenManager(storage: storage);
 
+  /// Metodo per il refresh del token.
+  Future<bool> refreshTokenRequest() async {
+    try {
+      final String? currentAccessToken = await tokenManager.accessToken;
+      final String? currentRefreshToken = await tokenManager.refreshToken;
+      if (currentAccessToken == null || currentRefreshToken == null) {
+        throw 'Token non disponibili per il refresh';
+      }
+
+      // Costruisci l'header Cookie con i token correnti
+      final String cookieHeader =
+          'access-token=$currentAccessToken; refresh-token=$currentRefreshToken';
+
+      // Effettua la richiesta POST per il refresh
+      final response = await dio.post(
+        '/auth/token/refresh',
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+        ),
+      );
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        // I nuovi token dovrebbero essere inviati nei cookie della risposta
+        final cookies = response.headers.map['set-cookie'] ?? [];
+        String? newAccessToken;
+        String? newRefreshToken;
+
+        // Itera tra i cookie per estrarre i token
+        for (var cookie in cookies) {
+          if (cookie.contains('access-token=')) {
+            newAccessToken = _extractCookieValue(cookie, 'access-token');
+          } else if (cookie.contains('refresh-token=')) {
+            newRefreshToken = _extractCookieValue(cookie, 'refresh-token');
+          }
+        }
+
+        if (newAccessToken != null && newRefreshToken != null) {
+          // Salva i nuovi token tramite il TokenManager
+          await tokenManager.saveTokens(
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken,
+          );
+          print('Refresh token riuscito. Nuovi token salvati.');
+          return true;
+        } else {
+          throw 'Nuovi token non disponibili nella risposta';
+        }
+      }
+
+      throw 'Errore nel refresh: ${response.statusCode}';
+    } on DioException catch (e) {
+      print('Errore Dio durante il refresh token: ${e.message}');
+      return false;
+    } catch (e) {
+      print('Errore nel refresh token: $e');
+      return false;
+    }
+  }
 
   String? _extractCookieValue(String cookie, String key) {
     final startIndex = cookie.indexOf('$key=');

@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:evup_feb2025_flutter/core/api/auth_repository.dart';
+import 'package:evup_feb2025_flutter/core/models/bottom_navi_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -88,13 +89,7 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Preferiti'),
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profilo'),
-        ],
-      ),
+      bottomNavigationBar: const MyBottomNavigationBar(currentIndex: 0),
     );
   }
 
@@ -140,7 +135,7 @@ class HomeScreen extends ConsumerWidget {
     final eventDetails = await eventRepo.getEventBySlug(eventSlug);
 
     final primaryColor = Theme.of(context).primaryColor;
-    final secondaryColor = Colors.grey.shade600;
+    //final secondaryColor = Colors.grey.shade600;
     final backgroundColor = Theme.of(context).canvasColor;
 
     showModalBottomSheet(
