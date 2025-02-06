@@ -53,8 +53,89 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _changePassword() async {
-    // Implementa la logica per cambiare la password
+    final TextEditingController passwordController = TextEditingController();
+    final authRepo = ref.read(authRepositoryProvider);
+
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) { // Usiamo dialogContext locale per evitare problemi
+        return AlertDialog(
+          title: const Text('Cambia Password'),
+          content: TextField(
+            controller: passwordController,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: 'Nuova Password',
+              hintText: 'Inserisci la nuova password',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext), // Chiudiamo il dialogo con il contesto locale
+              child: const Text('Annulla'),
+            ),
+            TextButton(
+              onPressed: () async {
+                final newPassword = passwordController.text.trim();
+                if (newPassword.isEmpty) {
+                  return;
+                }
+
+                print('🔹 Tentativo di cambio password...');
+
+                Navigator.pop(dialogContext); // Chiudiamo il popup di inserimento
+
+                try {
+                  final success = await authRepo.changePassword(newPassword);
+                  print('🔹 Risultato API cambio password: $success');
+
+                  if (!mounted) return;
+
+                  // ✅ Usiamo lo `ScaffoldMessenger` per garantire che il `context` sia valido
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: [
+                          Icon(success ? Icons.check_circle : Icons.error, color: Colors.white),
+                          const SizedBox(width: 8),
+                          Text(success
+                              ? ' Password cambiata con successo!'
+                              : ' Errore: password non cambiata'),
+                        ],
+                      ),
+                      backgroundColor: success ? Colors.green : Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                } catch (e) {
+                  print('⚠️ Errore cambio password: $e');
+                  if (!mounted) return;
+
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Row(
+                        children: const [
+                          Icon(Icons.error, color: Colors.white),
+                          SizedBox(width: 8),
+                          Text('❌ Si è verificato un errore nel cambio password.'),
+                        ],
+                      ),
+                      backgroundColor: Colors.red,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+              child: const Text('Conferma'),
+            ),
+          ],
+        );
+      },
+    );
   }
+
 
   /// Converte una stringa data (ISO) in una data formattata, se possibile.
   String formatDate(String? dateStr) {
@@ -137,7 +218,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         backgroundImage: userData!['picture'] != null &&
                             (userData!['picture'] as String).isNotEmpty
                             ? NetworkImage(userData!['picture'])
-                            : const AssetImage('assets/images/default_avatar.png')
+                            : NetworkImage('https://cdn-icons-png.flaticon.com/512/149/149071.png')
                         as ImageProvider,
                       ),
                       Positioned(

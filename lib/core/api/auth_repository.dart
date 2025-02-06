@@ -420,6 +420,52 @@ class AuthRepository {
   }
 
 
+  Future<bool> changePassword(String newPassword) async {
+    try {
+      String? accessToken = await tokenManager.accessToken;
+      String? refreshToken = await tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw '⚠️ Token non disponibile. Effettua nuovamente il login.';
+      }
+
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      print('🔹 Invio richiesta a /auth/password/change...');
+      print('🔹 Header Cookie: $cookieHeader');
+      print('🔹 Nuova password: $newPassword');
+
+      final response = await dio.post(
+        '/auth/password/change',
+        data: {'password': newPassword},
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+          contentType: Headers.jsonContentType,
+        ),
+      );
+
+      print('✅ Risposta ricevuta: ${response.statusCode}');
+      print('✅ Body della risposta: ${response.data}');
+
+      if (response.statusCode == 200 && response.data is List) {
+        bool success = response.data.contains("SUCCESS");
+        print('✅ Il cambio password è stato confermato: $success');
+        return success;
+      }
+
+      print('❌ Errore nel cambio password: il server non ha restituito SUCCESS.');
+      return false;
+    } on DioException catch (e) {
+      print('⚠️ Errore API cambio password:');
+      print('⚠️ Codice status: ${e.response?.statusCode}');
+      print('⚠️ Body della risposta: ${e.response?.data}');
+      print('⚠️ Messaggio di errore: ${e.message}');
+
+      return false; // Assicura che in caso di errore la funzione restituisca `false`
+    }
+  }
+
+
   String _handleError(DioException e) {
     if (e.response != null) {
       final data = e.response!.data;
