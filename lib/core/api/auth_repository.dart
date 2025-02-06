@@ -1,5 +1,6 @@
 // core/api/auth_repository.dart
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:evup_feb2025_flutter/core/utils/token_manager.dart';
@@ -415,6 +416,38 @@ class AuthRepository {
       }
 
       // Se non è un errore gestito, lo passiamo all'handler generale
+      throw _handleError(e);
+    }
+  }
+
+  Future<bool> updateUserImage(File imageFile) async {
+    try {
+      String? accessToken = await tokenManager.accessToken;
+      String? refreshToken = await tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili. Effettua nuovamente il login.';
+      }
+
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      FormData formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(imageFile.path, filename: 'profile.jpg'),
+      });
+
+      final response = await dio.post(
+        '/auth/extra/image',
+        data: formData,
+        options: Options(
+          headers: {
+            'Cookie': cookieHeader,
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
       throw _handleError(e);
     }
   }

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:evup_feb2025_flutter/core/api/auth_repository.dart';
 import 'package:evup_feb2025_flutter/core/models/bottom_navi_bar.dart';
 import 'package:flutter/material.dart';
@@ -43,8 +45,29 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   Future<void> _changeProfilePicture() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      // Implementa l'upload della nuova immagine
+
+    if (pickedFile == null) return;
+
+    File imageFile = File(pickedFile.path);
+    final authRepo = ref.read(authRepositoryProvider);
+
+    try {
+      bool success = await authRepo.updateUserImage(imageFile);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Immagine profilo aggiornata con successo!'), backgroundColor: Colors.green),
+        );
+
+        // Aggiorna l'UI dopo il cambio immagine
+        _fetchUserData();
+      } else {
+        throw 'Errore sconosciuto';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore: $e'), backgroundColor: Colors.red),
+      );
     }
   }
 
