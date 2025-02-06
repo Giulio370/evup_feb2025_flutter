@@ -49,8 +49,33 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   }
 
   Future<void> _changeDescription() async {
-    // Implementa la logica per cambiare la descrizione
+    final authRepo = ref.read(authRepositoryProvider);
+    final newDescription = _descriptionController.text.trim();
+
+    if (newDescription.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('La descrizione non può essere vuota'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    try {
+      bool success = await authRepo.updateDescription(newDescription);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Descrizione aggiornata con successo!'), backgroundColor: Colors.green),
+        );
+      } else {
+        throw 'Errore sconosciuto';
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Errore: $e'), backgroundColor: Colors.red),
+      );
+    }
   }
+
 
   Future<void> _changePassword() async {
     final TextEditingController passwordController = TextEditingController();

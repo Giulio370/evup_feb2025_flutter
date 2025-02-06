@@ -419,6 +419,33 @@ class AuthRepository {
     }
   }
 
+  Future<bool> updateDescription(String description) async {
+    try {
+      String? accessToken = await tokenManager.accessToken;
+      String? refreshToken = await tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili. Effettua nuovamente il login.';
+      }
+
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      final response = await dio.post(
+        '/auth/extra/description',
+        data: {'description': description},
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+          contentType: Headers.jsonContentType,
+        ),
+      );
+
+      return response.statusCode == 200 && response.data['success'] == true;
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+
 
   Future<bool> changePassword(String newPassword) async {
     try {
