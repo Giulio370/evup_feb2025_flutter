@@ -61,6 +61,47 @@ class EventRepository {
       throw authRepository._handleError(e);
     }
   }
+  Future<bool> uploadEventImage(String eventSlug, File imageFile) async {
+    try {
+      // Recupera i token dal TokenManager
+      String? accessToken = await authRepository.tokenManager.accessToken;
+      String? refreshToken = await authRepository.tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili. Effettua nuovamente il login.';
+      }
+
+      // Costruisci il cookie header
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+      // Prepara i dati della richiesta
+      FormData formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(imageFile.path, filename: imageFile.path.split('/').last),
+      });
+
+      // Effettua la richiesta POST
+      final response = await authRepository.dio.post(
+        '/events/addImage/${Uri.encodeComponent(eventSlug)}',
+        data: formData,
+        options: Options(
+          headers: {
+            'Cookie': cookieHeader, // Invia i token come Cookie
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      // Controlla il risultato della richiesta
+      if (response.statusCode == 200) {
+        return true; // Upload riuscito
+      } else {
+        throw 'Errore durante l\'upload dell\'immagine: ${response.data}';
+      }
+    } on DioException catch (e) {
+      throw authRepository._handleError(e); // Gestisce gli errori di Dio
+    }
+  }
+
 
 
   Future<bool> updateEvent({

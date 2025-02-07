@@ -2,6 +2,7 @@ import 'package:evup_feb2025_flutter/features/events/presentation/screens/event_
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 
@@ -80,135 +81,229 @@ class OrganizerEventsScreen extends ConsumerWidget {
     );
   }
 
+
+
   void _showEventForm(BuildContext context, WidgetRef ref, Map<String, dynamic>? event) {
     final _formKey = GlobalKey<FormState>();
     final eventRepo = ref.read(eventRepositoryProvider);
+    final picker = ImagePicker();
+
     final TextEditingController titleController = TextEditingController(text: event?['title'] ?? '');
     final TextEditingController sbtitleController = TextEditingController(text: event?['sbtitle'] ?? '');
     final TextEditingController addressController = TextEditingController(text: event?['address'] ?? '');
     final TextEditingController guestController = TextEditingController(text: event?['special_guest'] ?? '');
     final TextEditingController descriptionController = TextEditingController(text: event?['description'] ?? '');
-    List<String> tags = List<String>.from(event?['tags'] ?? []);
+
     DateTime? timeStart = event?['time_start'] != null ? DateTime.parse(event!['time_start']) : null;
     DateTime? timeEnd = event?['time_end'] != null ? DateTime.parse(event!['time_end']) : null;
 
-    showDialog(
+    File? selectedImage;
+    String? imageUrl = event?['picture_url']; // Recupera l'URL dell'immagine se presente
+
+    Future<void> _pickImage() async {
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        selectedImage = File(pickedFile.path);
+      }
+    }
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(event == null ? 'Crea Evento' : 'Modifica Evento'),
-        content: SingleChildScrollView(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.8,
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: titleController,
-                    decoration: InputDecoration(labelText: 'Titolo'),
-                    validator: (value) => value == null || value.isEmpty ? 'Campo obbligatorio' : null,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 16,
+            right: 16,
+            top: 12,
+          ),
+          child: Form(
+            key: _formKey,
+            child: ListView(
+              shrinkWrap: true,
+              children: [
+                Center(
+                  child: Container(
+                    height: 4,
+                    width: 40,
+                    margin: const EdgeInsets.only(bottom: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
-                  TextFormField(
-                    controller: sbtitleController,
-                    decoration: InputDecoration(labelText: 'Sottotitolo'),
+                ),
+                Text(
+                  event == null ? 'Crea Evento' : 'Modifica Evento',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+
+                // Sezione per l'immagine
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    height: 180,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(12),
+                      image: selectedImage != null
+                          ? DecorationImage(image: FileImage(selectedImage!), fit: BoxFit.cover)
+                          : imageUrl != null
+                          ? DecorationImage(image: NetworkImage(imageUrl), fit: BoxFit.cover)
+                          : null,
+                    ),
+                    child: selectedImage == null && imageUrl == null
+                        ? const Center(child: Icon(Icons.camera_alt, size: 50, color: Colors.white))
+                        : null,
                   ),
-                  TextFormField(
-                    controller: addressController,
-                    decoration: InputDecoration(labelText: 'Indirizzo'),
+                ),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: titleController,
+                  decoration: InputDecoration(
+                    labelText: 'Titolo',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    prefixIcon: const Icon(Icons.title),
                   ),
-                  TextFormField(
-                    controller: guestController,
-                    decoration: InputDecoration(labelText: 'Ospite Speciale'),
+                  validator: (value) => value == null || value.isEmpty ? 'Campo obbligatorio' : null,
+                ),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: sbtitleController,
+                  decoration: InputDecoration(
+                    labelText: 'Sottotitolo',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    prefixIcon: const Icon(Icons.subtitles),
                   ),
-                  TextFormField(
-                    controller: descriptionController,
-                    decoration: InputDecoration(labelText: 'Descrizione'),
-                    maxLines: 3,
+                ),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: addressController,
+                  decoration: InputDecoration(
+                    labelText: 'Indirizzo',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    prefixIcon: const Icon(Icons.location_on),
                   ),
-                  ListTile(
-                    title: Text(timeStart == null ? "Scegli data e ora inizio" : "Inizio: ${DateFormat('dd/MM/yyyy HH:mm').format(timeStart!)}"),
-                    trailing: Icon(Icons.access_time),
-                    onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
+                ),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: guestController,
+                  decoration: InputDecoration(
+                    labelText: 'Ospite Speciale',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    prefixIcon: const Icon(Icons.person),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                TextFormField(
+                  controller: descriptionController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Descrizione',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                    prefixIcon: const Icon(Icons.description),
+                  ),
+                ),
+                const SizedBox(height: 8),
+
+                // Selezione Data e Ora
+                ListTile(
+                  title: Text(timeStart == null
+                      ? "Scegli data e ora inizio"
+                      : "Inizio: ${DateFormat('dd/MM/yyyy HH:mm').format(timeStart!)}"),
+                  trailing: const Icon(Icons.access_time, color: Colors.blueAccent),
+                  onTap: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: timeStart ?? DateTime.now(),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2101),
+                    );
+                    if (pickedDate != null) {
+                      TimeOfDay? pickedTime = await showTimePicker(
                         context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2000),
-                        lastDate: DateTime(2101),
+                        initialTime: TimeOfDay.now(),
                       );
-                      if (pickedDate != null) {
-                        TimeOfDay? pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (pickedTime != null) {
-                          timeStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
-                        }
+                      if (pickedTime != null) {
+                        timeStart = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
                       }
-                    },
-                  ),
-                  ListTile(
-                    title: Text(timeEnd == null ? "Scegli data e ora fine" : "Fine: ${DateFormat('dd/MM/yyyy HH:mm').format(timeEnd!)}"),
-                    trailing: Icon(Icons.access_time),
-                    onTap: () async {
-                      DateTime? pickedDate = await showDatePicker(
-                        context: context,
-                        initialDate: timeStart ?? DateTime.now(),
-                        firstDate: timeStart ?? DateTime.now(),
-                        lastDate: DateTime(2101),
-                      );
-                      if (pickedDate != null) {
-                        TimeOfDay? pickedTime = await showTimePicker(
-                          context: context,
-                          initialTime: TimeOfDay.now(),
-                        );
-                        if (pickedTime != null) {
-                          timeEnd = DateTime(pickedDate.year, pickedDate.month, pickedDate.day, pickedTime.hour, pickedTime.minute);
+                    }
+                  },
+                ),
+
+                // Bottoni Salva e Annulla
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton.icon(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.cancel, color: Colors.white),
+                      label: const Text("Annulla", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.grey.shade600,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        if (_formKey.currentState!.validate()) {
+                          if (event == null) {
+                            await eventRepo.createEvent(
+                              title: titleController.text,
+                              address: addressController.text,
+                              timeStart: timeStart!,
+                              timeEnd: timeEnd!,
+                              description: descriptionController.text,
+                            );
+                          } else {
+                            await eventRepo.updateEvent(
+                              eventSlug: event['slug'],
+                              title: titleController.text,
+                              address: addressController.text,
+                              timeStart: timeStart!,
+                              timeEnd: timeEnd!,
+                              description: descriptionController.text,
+                            );
+                          }
+
+                          // Se l'utente ha selezionato una nuova immagine, caricala
+                          if (selectedImage != null && event != null) {
+                            await eventRepo.uploadEventImage(event['slug'], selectedImage!);
+                          }
+
+                          Navigator.pop(context);
                         }
-                      }
-                    },
-                  ),
-                ],
-              ),
+                      },
+                      icon: const Icon(Icons.save, color: Colors.white),
+                      label: const Text("Salva", style: TextStyle(color: Colors.white)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+              ],
             ),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annulla'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              if (_formKey.currentState!.validate()) {
-                if (event == null) {
-                  print("NUOVOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOO");
-                  await eventRepo.createEvent(
-                    title: titleController.text,
-                    address: addressController.text,
-                    timeStart: timeStart!,
-                    timeEnd: timeEnd!,
-                    description: descriptionController.text,
-                  );
-                } else {
-                  await eventRepo.updateEvent(
-                    eventSlug: event['slug'],
-                    title: titleController.text,
-                    address: addressController.text,
-                    timeStart: timeStart!,
-                    timeEnd: timeEnd!,
-                    description: descriptionController.text,
-                  );
-                }
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Salva'),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
+
 
 
   Future<String?> _showTagDialog(BuildContext context) async {
@@ -301,7 +396,6 @@ class _EventCard extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
             Text(event["time_start"] != null
                 ? DateFormat('dd/MM/yyyy HH:mm').format(DateTime.parse(event["time_start"]))
                 : 'Data non disponibile'),
