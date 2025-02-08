@@ -49,6 +49,3 @@ class MyApp extends ConsumerWidget {
     );
   }
 }
-
-/*
-enum UserRole { user, organizer }*/

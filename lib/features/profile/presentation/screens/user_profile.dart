@@ -3,16 +3,22 @@ import 'dart:io';
 import 'package:evup_feb2025_flutter/core/api/auth_repository.dart';
 import 'package:evup_feb2025_flutter/core/models/bottom_navi_bar.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+
+
 class ProfilePage extends ConsumerStatefulWidget {
-  const ProfilePage({Key? key}) : super(key: key);
+  final bool isAdmin;
+
+  const ProfilePage({Key? key, this.isAdmin = false}) : super(key: key);
 
   @override
   _ProfilePageState createState() => _ProfilePageState();
 }
+
 
 class _ProfilePageState extends ConsumerState<ProfilePage> {
   Map<String, dynamic>? userData;
@@ -21,26 +27,77 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Chiamata post-frame per essere sicuri che il context sia disponibile
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _fetchUserData());
   }
 
   Future<void> _fetchUserData() async {
     try {
+      setState(() {
+        userData = null;
+      });
+
+      final authRepo = ref.read(authRepositoryProvider);
+
+
+      bool refreshed = await authRepo.refreshUser().timeout(Duration(seconds: 10), onTimeout: () {
+        print("Timeout durante il refresh del token.");
+        return false;
+      });
+
+      if (!refreshed) {
+        print("⚠️ Token scaduto, eseguo logout e mando l'utente al login.");
+
+        if (mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (BuildContext dialogContext) {
+              return AlertDialog(
+                title: Text("Sessione Scaduta"),
+                content: Text("La tua sessione è scaduta. Effettua nuovamente il login."),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      Navigator.pop(dialogContext);
+                      await authRepo.logout();
+                      if (mounted) {
+                        context.go('/login');
+                      }
+                    },
+                    child: Text("OK"),
+                  ),
+                ],
+              );
+            },
+          );
+        }
+        return;
+      }
+
       final eventRepository = ref.read(eventRepositoryProvider);
-      final data = await eventRepository.fetchUser();
+      final data = await eventRepository.fetchUser().timeout(Duration(seconds: 10), onTimeout: () {
+        print("Timeout durante il recupero dati utente.");
+        return {'error': 'Timeout'};
+      });
+
+      if (data.containsKey('error')) {
+        print("Errore nel caricamento utente: ${data['error']}");
+      }
+
       setState(() {
         userData = data;
         _descriptionController.text = data['description'] ?? '';
       });
     } catch (e) {
       print('Errore nel recupero utente: $e');
-      // In caso di errore, mostrare un messaggio oppure gestire lo stato
+
       setState(() {
         userData = {'error': e.toString()};
       });
     }
   }
+
 
   Future<void> _changeProfilePicture() async {
     final picker = ImagePicker();
@@ -108,7 +165,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
     showDialog(
       context: context,
-      builder: (dialogContext) { // Usiamo dialogContext locale per evitare problemi
+      builder: (dialogContext) {
         return AlertDialog(
           title: const Text('Cambia Password'),
           content: TextField(
@@ -121,7 +178,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext), // Chiudiamo il dialogo con il contesto locale
+              onPressed: () => Navigator.pop(dialogContext),
               child: const Text('Annulla'),
             ),
             TextButton(
@@ -133,7 +190,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                 print('🔹 Tentativo di cambio password...');
 
-                Navigator.pop(dialogContext); // Chiudiamo il popup di inserimento
+                Navigator.pop(dialogContext);
 
                 try {
                   final success = await authRepo.changePassword(newPassword);
@@ -141,7 +198,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
                   if (!mounted) return;
 
-                  // ✅ Usiamo lo `ScaffoldMessenger` per garantire che il `context` sia valido
+
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Row(
@@ -158,7 +215,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   );
                 } catch (e) {
-                  print('⚠️ Errore cambio password: $e');
+                  print('Errore cambio password: $e');
                   if (!mounted) return;
 
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -167,7 +224,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                         children: const [
                           Icon(Icons.error, color: Colors.white),
                           SizedBox(width: 8),
-                          Text('❌ Si è verificato un errore nel cambio password.'),
+                          Text('Si è verificato un errore nel cambio password.'),
                         ],
                       ),
                       backgroundColor: Colors.red,
@@ -218,7 +275,6 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Se c'è un errore, lo mostra in modo semplice
     if (userData != null && userData!.containsKey('error')) {
       return Scaffold(
         appBar: AppBar(title: const Text('Profilo')),
@@ -356,7 +412,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     buildInfoTextField("Piano", userData!['plan']?.toString() ?? ""),
                     buildInfoTextField("Data rinnovo", formatDate(userData!['dateRenew'])),
                     const SizedBox(height: 16),
-                    // Pulsanti disposti uno sotto l'altro
+
                     ElevatedButton(
                       onPressed: _changeDescription,
                       style: ElevatedButton.styleFrom(
@@ -382,7 +438,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
           ],
         ),
       ),
-      bottomNavigationBar: const MyBottomNavigationBar(currentIndex: 2),
+      bottomNavigationBar: widget.isAdmin ? null : const MyBottomNavigationBar(currentIndex: 2),
     );
   }
 }

@@ -38,9 +38,9 @@ class AdminDashboardScreen extends ConsumerWidget {
                 mainAxisSpacing: 16,
                 children: [
                   _dashboardCard(
-                    icon: Icons.people,
-                    title: 'Gestione Utenti',
-                    onTap: () => context.push('/admin/users'),
+                    icon: Icons.person,
+                    title: 'Gestione Profilo',
+                    onTap: () => context.push('/admin/profile'),
                   ),
                   _dashboardCard(
                     icon: Icons.event,
@@ -70,9 +70,9 @@ class AdminDashboardScreen extends ConsumerWidget {
     return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
-        _StatBox(title: 'Utenti Totali', value: '1,234'),
+        _StatBox(title: 'Utenti Registrati', value: '385'),
         _StatBox(title: 'Eventi Attivi', value: '56'),
-        _StatBox(title: 'Revenue', value: '€12,345'),
+        _StatBox(title: 'Revenue', value: '€1,345'),
       ],
     );
   }

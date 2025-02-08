@@ -62,25 +62,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   final authRepo = ref.watch(authRepositoryProvider);
                   return ElevatedButton(
                     onPressed: () async {
-                      /*if (_formKey.currentState!.validate()) {
-                        try {
-                          final Dio dio = Dio(); // Crea un'istanza di Dio
 
-                          print('Trying login with: ${_emailController.text}');
-                          final response = await dio.post(
-                            'https://api.evup.it/auth/login/email', // Assicurati di usare l'URL completo
-                            data: {'email': _emailController.text, 'password': _passwordController.text},
-                          );
-                          print('Response status: ${response.statusCode}');
-                          print('Response headers: ${response.headers}');
-                          print('Response body: ${response.data}');
-
-                          // ... resto del codice
-                        } catch (e) {
-                          print('Error details: $e');
-                          // ... gestione errore
-                        }
-                      }*/
                       if (_formKey.currentState!.validate()) {
                         try {
                           final success = await authRepo.login(
@@ -91,17 +73,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           if (success) {
                             final role = await authRepo.tokenManager.getRole();
 
-                            if (role == UserRole.admin || role == UserRole.organizer) {
-                              context.go('/admin-dashboard');
-                            } else {
-                              context.go('/home');
+
+                            if (context.mounted) {
+                              if (role == UserRole.admin || role == UserRole.organizer) {
+                                context.go('/admin-dashboard');
+                              } else {
+                                context.go('/home');
+                              }
                             }
                           }
                         } catch (e) {
                           print('Errore ricevuto: $e');
 
-                          if (e.toString().contains("EMAIL_NOT_VERIFIED")) { // Modifica qui
-                            if (mounted) {
+                          if (e.toString().contains("EMAIL_NOT_VERIFIED")) {
+                            if (context.mounted) {
                               context.go('/');
                             }
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -110,11 +95,6 @@ class _LoginScreenState extends State<LoginScreen> {
                                 backgroundColor: Colors.orange,
                               ),
                             );
-
-                            // Aggiungi un delay per permettere la visualizzazione dello SnackBar
-
-
-
                           } else {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -125,11 +105,13 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         }
                       }
+
                     },
                     child: const Text('Login'),
                   );
                 },
               ),
+
             ],
           ),
         ),

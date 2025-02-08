@@ -106,9 +106,9 @@ class HomeScreen extends ConsumerWidget {
   Widget _eventCard(BuildContext context, WidgetRef ref, Map<String, dynamic> event) {
     final random = Random();
     final imageUrls = [
-      'https://i.pinimg.com/236x/86/e4/0e/86e40e92caeb09ed28e3edf0176e00ca.jpg', // Sostituisci con URL reali
-      'https://i.pinimg.com/736x/d7/fb/c0/d7fbc0d42009bb8e145b98447bd8a807.jpg', // Sostituisci con URL reali
-      'https://i.pinimg.com/736x/88/f0/fc/88f0fcd5fa63f65bb2ff50a522a360d4.jpg', // Sostituisci con URL reali
+      'https://i.pinimg.com/236x/86/e4/0e/86e40e92caeb09ed28e3edf0176e00ca.jpg',
+      'https://i.pinimg.com/736x/d7/fb/c0/d7fbc0d42009bb8e145b98447bd8a807.jpg',
+      'https://i.pinimg.com/736x/88/f0/fc/88f0fcd5fa63f65bb2ff50a522a360d4.jpg',
     ];
 
     return Card(
@@ -141,7 +141,7 @@ class HomeScreen extends ConsumerWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: backgroundColor, // Colore di sfondo del modale
+      backgroundColor: backgroundColor,
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.all(20.0),
@@ -188,7 +188,7 @@ class HomeScreen extends ConsumerWidget {
                     style: ElevatedButton.styleFrom(
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                      textStyle: const TextStyle(fontSize: 18, color: Colors.white), // Testo bianco
+                      textStyle: const TextStyle(fontSize: 18, color: Colors.white),
                       backgroundColor: primaryColor,
                     ),
                     child: const Text('Partecipo'),
@@ -222,7 +222,7 @@ class HomeScreen extends ConsumerWidget {
           ],
           Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           const SizedBox(width: 8),
-          Flexible( // o Expanded con FlexFit.loose
+          Flexible(
             child: Align(
               alignment: Alignment.topLeft, // Allinea a sinistra e in alto
               child: Text(value ?? 'Non disponibile', style: const TextStyle(fontSize: 16)),

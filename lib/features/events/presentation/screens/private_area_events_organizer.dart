@@ -1,4 +1,4 @@
-import 'package:evup_feb2025_flutter/features/events/presentation/screens/event_detail.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,17 +6,17 @@ import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:io';
 
-import 'package:evup_feb2025_flutter/core/api/event_repository.dart';
+
 import 'package:evup_feb2025_flutter/core/api/auth_repository.dart';
 
 final userEventsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   final eventRepo = ref.watch(eventRepositoryProvider);
 
-  // Fetch the events from the event repository
+
   try {
-    return await eventRepo.getEventsForUser(); // Assuming getEventsForUser fetches events
+    return await eventRepo.getEventsForUser();
   } catch (e) {
-    throw Exception('Errore nel recupero degli eventi: $e'); // Handle error
+    throw Exception('Errore nel recupero degli eventi: $e');
   }
 });
 
@@ -30,12 +30,12 @@ class OrganizerEventsScreen extends ConsumerWidget {
     final eventRepo = ref.watch(eventRepositoryProvider);
     final authRepo = ref.watch(authRepositoryProvider);
 
-    // Ricarica gli eventi automaticamente all'apertura della pagina
+
     Future<void> _reloadEvents() async {
       ref.refresh(userEventsProvider);
     }
 
-    // Chiamata automatica a _reloadEvents() quando la pagina entra
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _reloadEvents();
     });
@@ -51,7 +51,7 @@ class OrganizerEventsScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
-              // Ricarica gli eventi
+
               ref.refresh(userEventsProvider);
             },
           ),
@@ -83,22 +83,34 @@ class OrganizerEventsScreen extends ConsumerWidget {
 
 
 
-  void _showEventForm(BuildContext context, WidgetRef ref, Map<String, dynamic>? event) {
+  Future<void> _showEventForm(BuildContext context, WidgetRef ref, Map<String, dynamic>? event) async {
     final _formKey = GlobalKey<FormState>();
     final eventRepo = ref.read(eventRepositoryProvider);
     final picker = ImagePicker();
 
-    final TextEditingController titleController = TextEditingController(text: event?['title'] ?? '');
-    final TextEditingController sbtitleController = TextEditingController(text: event?['sbtitle'] ?? '');
-    final TextEditingController addressController = TextEditingController(text: event?['address'] ?? '');
-    final TextEditingController guestController = TextEditingController(text: event?['special_guest'] ?? '');
-    final TextEditingController descriptionController = TextEditingController(text: event?['description'] ?? '');
 
-    DateTime? timeStart = event?['time_start'] != null ? DateTime.parse(event!['time_start']) : null;
-    DateTime? timeEnd = event?['time_end'] != null ? DateTime.parse(event!['time_end']) : null;
+    Map<String, dynamic>? updatedEvent;
+    if (event != null) {
+      try {
+        updatedEvent = await eventRepo.getEventBySlug(event['slug']);
+      } catch (e) {
+        print('Errore nel recupero dell\'evento: $e');
+      }
+    }
+
+    final TextEditingController titleController = TextEditingController(text: updatedEvent?['title'] ?? '');
+    final TextEditingController sbtitleController = TextEditingController(text: updatedEvent?['sbtitle'] ?? '');
+    final TextEditingController addressController = TextEditingController(text: updatedEvent?['address'] ?? '');
+    final TextEditingController guestController = TextEditingController(
+        text: updatedEvent?['special_guest']?['name'] ?? ''
+    );
+    final TextEditingController descriptionController = TextEditingController(text: updatedEvent?['description'] ?? '');
+
+    DateTime? timeStart = updatedEvent?['time_start'] != null ? DateTime.parse(updatedEvent!['time_start']) : null;
+    DateTime? timeEnd = updatedEvent?['time_end'] != null ? DateTime.parse(updatedEvent!['time_end']) : null;
 
     File? selectedImage;
-    String? imageUrl = event?['picture_url']; // Recupera l'URL dell'immagine se presente
+    String? imageUrl = updatedEvent?['picture_url'];
 
     Future<void> _pickImage() async {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -241,6 +253,34 @@ class OrganizerEventsScreen extends ConsumerWidget {
                     }
                   },
                 ),
+                ListTile(
+                  title: Text(timeEnd == null
+                      ? "Scegli data e ora fine"
+                      : "Fine: ${DateFormat('dd/MM/yyyy HH:mm').format(timeEnd!)}"),
+                  trailing: const Icon(Icons.access_time, color: Colors.redAccent),
+                  onTap: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: timeEnd ?? (timeStart ?? DateTime.now()).add(Duration(hours: 1)),
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2101),
+                    );
+                    if (pickedDate != null) {
+                      TimeOfDay? pickedTime = await showTimePicker(
+                        context: context,
+                        initialTime: timeEnd != null
+                            ? TimeOfDay.fromDateTime(timeEnd!)
+                            : TimeOfDay.now(),
+                      );
+                      if (pickedTime != null) {
+                        timeEnd = DateTime(
+                            pickedDate.year, pickedDate.month, pickedDate.day,
+                            pickedTime.hour, pickedTime.minute
+                        );
+                      }
+                    }
+                  },
+                ),
 
                 // Bottoni Salva e Annulla
                 const SizedBox(height: 8),
@@ -277,10 +317,12 @@ class OrganizerEventsScreen extends ConsumerWidget {
                               description: descriptionController.text,
                             );
                           }
+                          // Aggiorna lista eventi
+                          ref.invalidate(userEventsProvider);
 
                           // Se l'utente ha selezionato una nuova immagine, caricala
                           if (selectedImage != null && event != null) {
-                            await eventRepo.uploadEventImage(event['slug'], selectedImage!);
+                            await eventRepo.uploadEventImage(event['title'], selectedImage!);
                           }
 
                           Navigator.pop(context);
@@ -348,7 +390,7 @@ class OrganizerEventsScreen extends ConsumerWidget {
 
               if (event["slug"] != null) {
 
-                await eventRepo.deleteEvent(event["slug"]); // Passa lo slug
+                await eventRepo.deleteEvent(event["slug"]);
 
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

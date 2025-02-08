@@ -61,14 +61,14 @@ class DioClient {
           if (error.response?.statusCode == 401) {
             RequestOptions options = error.response!.requestOptions;
 
-            // Se non è già in corso un refresh, avvialo
+
             if (!_isRefreshing) {
               _isRefreshing = true;
               try {
                 final newToken = await _authRepository.refreshTokenRequest();
                 if (newToken != null) {
-                  // Salva il nuovo token (già gestito nel refreshTokenRequest)
-                  // Aggiorna l'header della richiesta originale
+
+
                   options.headers['Authorization'] = 'Bearer $newToken';
 
                   // Esegui tutte le richieste in sospeso
@@ -90,7 +90,7 @@ class DioClient {
                   _isRefreshing = false;
                   return handler.resolve(response);
                 } else {
-                  // Se il refresh fallisce, reindirizza al login o gestisci l'errore
+                  // Se il refresh fallisce, reindirizza al login
                   _isRefreshing = false;
                   return handler.next(error);
                 }
@@ -129,38 +129,3 @@ class DioClient {
   }
 }
 
-  /*DioClient(FlutterSecureStorage storage)
-      : _dio = Dio(BaseOptions(
-    baseUrl: Constants.apiBaseUrl, // Usa l'API base URL
-    connectTimeout: const Duration(seconds: 10), // Timeout di connessione
-    receiveTimeout: const Duration(seconds: 10), // Timeout di risposta
-  )),
-        _tokenManager = TokenManager(storage: storage) {
-    _initInterceptors();
-  }
-
-  Dio get dio => _dio;
-
-  void _initInterceptors() {
-    _dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await _tokenManager.accessToken;
-          print('TOKEN RECUPERATO: $token'); // 🔍 Debug
-          if (token != null) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          return handler.next(options);
-        },
-        onError: (error, handler) async {
-          print('ERRORE DIO: ${error.response?.statusCode} - ${error.message}'); // 🔍 Debug
-          if (error.response?.statusCode == 401) {
-            final newToken = await _tokenManager.refreshToken;
-            print('NUOVO TOKEN: $newToken'); // 🔍 Debug
-          }
-          return handler.next(error);
-        },
-      ),
-    );
-  }
-}*/

@@ -12,34 +12,45 @@ class MyBottomNavigationBar extends StatelessWidget {
         context.go('/home');
         break;
       case 1:
-      // Aggiungi la route per i Preferiti se esistente
-        context.go('/favorites');
+        context.go('/map');
         break;
       case 2:
         context.go('/profile');
         break;
+      case 3:
+        context.go('/settings');
+        break;
+      default:
+        break;
     }
   }
+
 
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       currentIndex: currentIndex,
       onTap: (index) => _onItemTapped(context, index),
+      type: BottomNavigationBarType.fixed,
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home),
           label: 'Home',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.favorite),
-          label: 'Preferiti',
+          icon: Icon(Icons.map),
+          label: 'Mappa',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person),
           label: 'Profilo',
         ),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.settings),
+          label: 'Impostazioni',
+        ),
       ],
     );
+
   }
 }

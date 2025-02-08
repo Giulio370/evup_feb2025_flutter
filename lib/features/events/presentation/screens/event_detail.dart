@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class EventFormModal extends StatefulWidget {
-  final Map<String, dynamic>? event; // Accetta un evento come mappa JSON
+  final Map<String, dynamic>? event;
 
   const EventFormModal({super.key, this.event});
 

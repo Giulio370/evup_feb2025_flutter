@@ -127,7 +127,7 @@ class EventRepository {
         "sbtitle": "Default Subtitle",  // Valore di default
         "address": address,
         "special_guest": {"name": "Nessun ospite"},  // Valore predefinito
-        "tags": [{"name": "Generale"}],  // Valore predefinito
+        "tags": {"name": "Generale"},  // Valore predefinito
         "time_start": timeStart.toUtc().toIso8601String(),
         "time_end": timeEnd.toUtc().toIso8601String(),
         "description": description,
@@ -191,9 +191,9 @@ class EventRepository {
     required DateTime timeStart,
     required DateTime timeEnd,
     required String description,
-    String? sbtitle, // Parametro opzionale
-    String? specialGuestName, // Parametro opzionale
-    String? tagName, // Parametro opzionale
+    String? sbtitle,
+    String? specialGuestName,
+    String? tagName,
   }) async {
     try {
       String? accessToken = await authRepository.tokenManager.accessToken;
@@ -210,7 +210,7 @@ class EventRepository {
         "sbtitle": sbtitle ?? "Default Subtitle", // Usa valore opzionale o default
         "address": address,
         "special_guest": {"name": specialGuestName ?? "Nessun ospite"},
-        "tags": {"name": tagName ?? "Generale"}, // Struttura corretta come oggetto
+        "tags": {"name": tagName ?? "Generale"},
         "time_start": timeStart.toUtc().toIso8601String(),
         "time_end": timeEnd.toUtc().toIso8601String(),
         "description": description,
@@ -229,7 +229,7 @@ class EventRepository {
     } on DioException catch (e) {
       if (e.response?.statusCode == 400) {
         final errorMessage = e.response?.data?['error'] ?? 'Errore sconosciuto';
-        throw errorMessage; // Restituisce l'errore specifico dal backend
+        throw errorMessage;
       }
       throw authRepository._handleError(e);
     }
@@ -270,7 +270,7 @@ class EventRepository {
 
   Future<bool> deleteEvent(String eventSlug) async {
     try {
-      // Recupera i token (ad esempio, dal TokenManager o dal local storage)
+
       String? accessToken = await authRepository.tokenManager.accessToken;
       String? refreshToken = await authRepository.tokenManager.refreshToken;
 
@@ -344,7 +344,7 @@ class AuthRepository {
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
-        // I nuovi token dovrebbero essere inviati nei cookie della risposta
+
         final cookies = response.headers.map['set-cookie'] ?? [];
         String? newAccessToken;
         String? newRefreshToken;
@@ -359,7 +359,7 @@ class AuthRepository {
         }
 
         if (newAccessToken != null && newRefreshToken != null) {
-          // Salva i nuovi token tramite il TokenManager
+          // Salva i nuovi token
           await tokenManager.saveTokens(
             accessToken: newAccessToken,
             refreshToken: newRefreshToken,
@@ -461,6 +461,74 @@ class AuthRepository {
     }
   }
 
+  Future<bool> refreshUser() async {
+    try {
+      final String? refreshToken = await tokenManager.refreshToken;
+
+      if (refreshToken == null) {
+        print('Refresh token non disponibile. Eseguo logout...');
+        await logout();
+        return false;
+      }
+
+
+      final String cookieHeader = 'refresh-token=$refreshToken';
+
+
+      final response = await dio.post(
+        '/auth/token/refresh',
+        options: Options(
+          headers: {'Cookie': cookieHeader},
+        ),
+      );
+
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+
+        final cookies = response.headers.map['set-cookie'] ?? [];
+        String? newAccessToken;
+        String? newRefreshToken;
+
+        for (var cookie in cookies) {
+          if (cookie.contains('access-token=')) {
+            newAccessToken = _extractCookieValue(cookie, 'access-token');
+          }
+          if (cookie.contains('refresh-token=')) {
+            newRefreshToken = _extractCookieValue(cookie, 'refresh-token');
+          }
+        }
+
+        print("🔍 Token ricevuti dal server:");
+        print(" - Access Token: $newAccessToken");
+        print(" - Refresh Token: ${newRefreshToken ?? 'Non inviato'}");
+
+
+        if (newAccessToken != null) {
+          await tokenManager.saveTokens(
+            accessToken: newAccessToken,
+            refreshToken: newRefreshToken ?? refreshToken, // 🔥 Mantieni il vecchio refresh-token se non arriva
+          );
+
+          print(' Token aggiornati con successo.');
+          return true;
+        } else {
+          print('Access token non ricevuto. Il refresh non è riuscito.');
+          await logout();
+          return false;
+        }
+      }
+
+      print('Errore nel refresh token. Eseguo logout...');
+      await logout();
+      return false;
+    } on DioException catch (e) {
+      print('Errore durante il refresh del token: ${e.response?.data}');
+      await logout();
+      return false;
+    }
+  }
+
+
   Future<bool> updateUserImage(File imageFile) async {
     try {
       String? accessToken = await tokenManager.accessToken;
@@ -527,7 +595,7 @@ class AuthRepository {
       String? refreshToken = await tokenManager.refreshToken;
 
       if (accessToken == null || refreshToken == null) {
-        throw '⚠️ Token non disponibile. Effettua nuovamente il login.';
+        throw 'Token non disponibile. Effettua nuovamente il login.';
       }
 
       String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
@@ -545,24 +613,24 @@ class AuthRepository {
         ),
       );
 
-      print('✅ Risposta ricevuta: ${response.statusCode}');
-      print('✅ Body della risposta: ${response.data}');
+      print(' Risposta ricevuta: ${response.statusCode}');
+      print(' Body della risposta: ${response.data}');
 
       if (response.statusCode == 200 && response.data is List) {
         bool success = response.data.contains("SUCCESS");
-        print('✅ Il cambio password è stato confermato: $success');
+        print(' Il cambio password è stato confermato: $success');
         return success;
       }
 
-      print('❌ Errore nel cambio password: il server non ha restituito SUCCESS.');
+      print('Errore nel cambio password: il server non ha restituito SUCCESS.');
       return false;
     } on DioException catch (e) {
-      print('⚠️ Errore API cambio password:');
-      print('⚠️ Codice status: ${e.response?.statusCode}');
-      print('⚠️ Body della risposta: ${e.response?.data}');
-      print('⚠️ Messaggio di errore: ${e.message}');
+      print(' Errore API cambio password:');
+      print(' Codice status: ${e.response?.statusCode}');
+      print(' Body della risposta: ${e.response?.data}');
+      print(' Messaggio di errore: ${e.message}');
 
-      return false; // Assicura che in caso di errore la funzione restituisca `false`
+      return false;
     }
   }
 
@@ -658,7 +726,7 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
-      final response = await dio.get('/auth/login/logout'); // Usa GET se il backend lo richiede
+      final response = await dio.get('/auth/login/logout');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         print('Logout riuscito');
@@ -669,6 +737,7 @@ class AuthRepository {
         await storage.delete(key: 'user_role');
         await storage.delete(key: 'user_email');
         await storage.delete(key: 'profile_picture');
+        await storage.deleteAll();
       } else {
         throw 'Errore durante il logout';
       }
@@ -678,11 +747,4 @@ class AuthRepository {
     }
   }
 
-  /*dynamic _handleError(DioException e) {
-    final response = e.response;
-    if (response?.data is Map && response?.data['message'] != null) {
-      return response?.data['message'];
-    }
-    return e.message ?? 'Errore sconosciuto';
-  }*/
 }
