@@ -1,16 +1,23 @@
-# evup_feb2025_flutter
+# **EVUP Application** 🚀
 
-Evup
+## 📌 Introduzione
+**EVUP** è un hub centralizzato per **bar, discoteche e organizzatori di eventi**, progettato per semplificare la promozione delle loro attività e facilitare agli utenti la **ricerca di eventi locali in tempo reale**.  
 
-## Getting Started
+Grazie a un'interfaccia intuitiva e a un'architettura scalabile, EVUP permette di:
+- Scoprire eventi nelle vicinanze con **mappe interattive** 📍
+- Registrarsi e autenticarsi con **un sistema sicuro** 🔑
+- Personalizzare il proprio profilo con immagini e descrizioni 📸
+- Organizzare eventi con un **sistema di gestione avanzato** 🎉
+- Acquistare e gestire **piani di promozione** per eventi e locali 💳
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🎯 Funzionalità Principali
+- ✅ **Autenticazione Utenti** (Login, Registrazione, Recupero Password, Logout)
+- 🔑 **Gestione Token** (Refresh Token, Fetch User Info)
+- 💳 **Gestione Abbonamenti** (Acquisto, Lettura e Rimozione piani)
+- 🎉 **Gestione Eventi** (Creazione, Modifica, Eliminazione, Ricerca per utente)
+- 🛠 **Ruoli e Permessi** (Admin, Organizer, Utente Standard)
+- 📍 **Mappa Interattiva** per cercare eventi in base alla posizione
+- 📩 **Notifiche Push** per aggiornamenti su eventi e prenotazioni
+- 🔎 **Ricerca Avanzata** di eventi in base a categorie e posizione
