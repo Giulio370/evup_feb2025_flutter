@@ -48,9 +48,9 @@ class AdminDashboardScreen extends ConsumerWidget {
                     onTap: () => context.push('/admin/events'),
                   ),
                   _dashboardCard(
-                    icon: Icons.bar_chart,
-                    title: 'Statistiche',
-                    onTap: () => context.push('/admin/stats'),
+                    icon: Icons.monetization_on,
+                    title: 'Piani di Abbonamento',
+                    onTap: () => context.push('/admin/plans'),
                   ),
                   _dashboardCard(
                     icon: Icons.settings,

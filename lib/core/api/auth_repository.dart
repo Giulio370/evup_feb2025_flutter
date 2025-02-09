@@ -671,6 +671,37 @@ class AuthRepository {
     await storage.write(key: 'refresh_token', value: refreshToken);
   }
 
+  Future<List<Map<String, dynamic>>> getPlans() async {
+    try {
+
+      String? accessToken = await tokenManager.accessToken;
+      String? refreshToken = await tokenManager.refreshToken;
+
+      if (accessToken == null || refreshToken == null) {
+        throw 'Token non disponibili. Effettua il login.';
+      }
+
+
+      String cookieHeader = 'access-token=$accessToken; refresh-token=$refreshToken';
+
+
+      final response = await dio.get(
+        '/plan/read',
+        options: Options(headers: {'Cookie': cookieHeader}),
+      );
+
+      if (response.statusCode == 200) {
+        final List<dynamic> plans = response.data;
+        return plans.cast<Map<String, dynamic>>();
+      } else {
+        throw 'Errore nella richiesta: ${response.statusCode}';
+      }
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+
   Future<void> signup({
     required String email,
     required String password,

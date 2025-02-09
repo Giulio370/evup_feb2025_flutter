@@ -2,6 +2,7 @@
 import 'package:evup_feb2025_flutter/core/utils/token_manager.dart';
 import 'package:evup_feb2025_flutter/features/admin/presentation/screens/admin_dashboard_screen.dart';
 import 'package:evup_feb2025_flutter/features/admin/presentation/screens/settings_page.dart';
+import 'package:evup_feb2025_flutter/features/events/presentation/screens/PlanPage.dart';
 import 'package:evup_feb2025_flutter/features/events/presentation/screens/events_map_screen.dart';
 
 import 'package:evup_feb2025_flutter/features/events/presentation/screens/private_area_events_organizer.dart';
@@ -71,6 +72,10 @@ final router = GoRouter(
     GoRoute(
       path: '/map',
       builder: (context, state) => const EventsMapScreen(),
+    ),
+    GoRoute(
+      path: '/admin/plans',
+      builder: (context, state) => const PlanPage(),
     ),
     //
   ],

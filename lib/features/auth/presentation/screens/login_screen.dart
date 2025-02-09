@@ -2,6 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:evup_feb2025_flutter/core/api/auth_repository.dart';
 import 'package:evup_feb2025_flutter/core/utils/token_manager.dart';
+import 'package:evup_feb2025_flutter/features/auth/presentation/screens/role_selector_screen.dart';
 import 'package:evup_feb2025_flutter/main.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -62,7 +63,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   final authRepo = ref.watch(authRepositoryProvider);
                   return ElevatedButton(
                     onPressed: () async {
-
                       if (_formKey.currentState!.validate()) {
                         try {
                           final success = await authRepo.login(
@@ -72,7 +72,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           if (success) {
                             final role = await authRepo.tokenManager.getRole();
-
 
                             if (context.mounted) {
                               if (role == UserRole.admin || role == UserRole.organizer) {
@@ -105,12 +104,53 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         }
                       }
-
                     },
                     child: const Text('Login'),
                   );
                 },
               ),
+              const SizedBox(height: 16),
+
+              TextButton(
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) {
+                      return AlertDialog(
+                        title: const Text('Conferma'),
+                        content: const Text('Sei sicuro di voler tornare alla selezione dei ruoli?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text('Annulla'),
+                          ),
+                          Consumer(
+                            builder: (context, ref, child) {
+                              return TextButton(
+                                onPressed: () async {
+                                  final authRepo = ref.read(authRepositoryProvider);
+                                  await authRepo.logout();
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushReplacement(
+                                      MaterialPageRoute(builder: (context) => const RoleSelectorScreen()),
+                                    );
+                                  }
+                                },
+                                child: const Text('Conferma'),
+                              );
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
+                child: const Text(
+                  'Torna alla selezione dei ruoli',
+                  style: TextStyle(fontSize: 16, color: Colors.blue),
+                ),
+              ),
+
 
             ],
           ),
